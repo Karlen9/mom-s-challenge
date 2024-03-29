@@ -15,7 +15,7 @@ export default function Home() {
   return (
     <WagmiProvider config={config}>
       <QueryClientProvider client={queryClient}>
-        <RainbowKitProvider theme={lightTheme()}>
+        <RainbowKitProvider theme={lightTheme()} locale={"en-US"}>
           <ErrorBoundary>
             <AllowancesProvider>
               <App />

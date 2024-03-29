@@ -60,7 +60,6 @@ export const AllowancesProvider = ({
       } catch (error) {
         if (error instanceof Error) {
           console.error("Error updating allowances:", error);
-          toast.error(`Error updating allowances: ${error?.message}"`);
         }
       }
     },
