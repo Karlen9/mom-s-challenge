@@ -1,14 +1,29 @@
 import { AllowanceItem } from "./AllowanceItem";
 import { filterMaxValueByAddress } from "../shared/utils/filterMaxValueByAddress";
 import { useAllowances } from "@/contexts/useAllowances";
-import { memo } from "react";
+import { memo, useEffect, useState } from "react";
+import { useAccount } from "wagmi";
+import { Allowances } from "@/components/shared/types/types";
 
 export const AllowancesList = memo(function AllowancesList() {
   const { allowances } = useAllowances();
+  const [filteredArray, setFilteredArray] = useState<Allowances>([]);
 
-  const filteredArray = filterMaxValueByAddress(allowances ?? []).filter(
+  const resultAllowances = filterMaxValueByAddress(allowances ?? []).filter(
     (item) => item.args.value !== BigInt(0)
   );
+
+  const { chainId } = useAccount();
+
+  const { address } = useAccount();
+
+  useEffect(() => {
+    setFilteredArray(resultAllowances);
+  }, [allowances]);
+
+  useEffect(() => {
+    setFilteredArray([]);
+  }, [chainId, address]);
 
   return (
     <>

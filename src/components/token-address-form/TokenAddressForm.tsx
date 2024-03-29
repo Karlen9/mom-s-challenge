@@ -14,7 +14,7 @@ export const TokenAddressForm = memo(function TokenAddress() {
     defaultValues: { tokenaddress: "" },
     mode: "onChange",
   });
-  const { handleSubmit, formState, watch, reset } = form;
+  const { handleSubmit, formState, reset } = form;
   const { errors } = formState;
 
   const { chainId } = useAccount();
