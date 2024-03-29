@@ -1,4 +1,7 @@
-This is a [Next.js](https://nextjs.org/) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
+This app gives you allowances of chosen token. To use it, insert token contract address into input field and press `Search` button.
+Also you can invoke existing allowance by clicking on `Revoke` buttton in allowances table. 
+
+You can switch networks and search for allowances on Ethereum mainnet or on the localhost
 
 ## Getting Started
 
@@ -14,24 +17,23 @@ pnpm dev
 bun dev
 ```
 
+Create .env file and place 3 variables:
+
+```
+NEXT_PUBLIC_PROJECT_ID
+RPC_URL_MAINNET
+RPC_URL_LOCALHOST
+```
+
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 
-This project uses [`next/font`](https://nextjs.org/docs/basic-features/font-optimization) to automatically optimize and load Inter, a custom Google Font.
+## Localhost
 
-## Learn More
+As it said earlier you can you local blockchain in this app. 
 
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js/) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/deployment) for more details.
+To run it on your local machine use Anvil from foundry.
+https://github.com/foundry-rs/foundry/tree/master/crates/anvil
+To approve tokens for testing allowances use [this](https://book.getfoundry.sh/tutorials/forking-mainnet-with-cast-anvil)
+Don't forget to change local blockchain chain id to 1337 
 # mom-s-challenge
