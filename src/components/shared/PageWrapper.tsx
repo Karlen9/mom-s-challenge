@@ -7,6 +7,5 @@ export const PageWrapper = ({ children }: TProps) => {
     <div className="container w-full justify-center mx-auto h-screen">
       {children}
     </div>
-  ); 
+  );
 };
- 

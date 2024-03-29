@@ -1,8 +1,9 @@
 import { AllowanceItem } from "./AllowanceItem";
 import { filterMaxValueByAddress } from "../shared/utils/filterMaxValueByAddress";
 import { useAllowances } from "@/contexts/useAllowances";
+import { memo } from "react";
 
-export const AllowancesList = () => {
+export const AllowancesList = memo(() => {
   const { allowances } = useAllowances();
 
   const filteredArray = filterMaxValueByAddress(allowances ?? []).filter(
@@ -10,14 +11,14 @@ export const AllowancesList = () => {
   );
 
   return (
-    <>
+    <> 
       {filteredArray && filteredArray?.length > 0 ? (
         <table className="w-full text-sm text-left rtl:text-right text-gray-500 dark:text-gray-400">
           <thead className="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400">
             <tr>
               <th className="px-6 py-3">Address</th>
               <th className="px-6 py-3">Token</th>
-              <th className="px-6 py-3">Allowance of</th>
+              <th className="px-6 py-3">Amount</th>
               <th className="px-6 py-3">Revoke</th>
             </tr>
           </thead>
@@ -45,4 +46,4 @@ export const AllowancesList = () => {
       ) : null}
     </>
   );
-};
+})

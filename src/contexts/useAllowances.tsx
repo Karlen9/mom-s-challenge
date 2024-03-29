@@ -14,7 +14,7 @@ type TAllowancesLogProps = {
 
 const AllowancesContext = createContext<TAllowancesLogProps>({
   updateAllowances: async () => [],
-  revokeAllowance: async () => {},
+  revokeAllowance: () => {},
   allowances: null,
 });
 
@@ -37,22 +37,10 @@ export const AllowancesProvider = ({
 
   const publicClient = useMemo(() => getPublicClient(chainId), [chainId]);
 
-  const onRevokeSuccess = () => {
+  const onRevokeSuccess = (contract: TAddress) => {
+    updateAllowances(contract);
     toast.success("Allowance succesfully revoked", {
       position: "bottom-center",
-    });
-  };
-
-  const watchAllowances = (contract: TAddress) => {
-    publicClient.watchEvent({
-      address: contract,
-      event: parsedEventString,
-      args: {
-        owner: address,
-      },
-      onLogs: (logs) => {
-        setAllowances(logs as Allowances);
-      },
     });
   };
 
@@ -69,7 +57,6 @@ export const AllowancesProvider = ({
       });
 
       setAllowances(logEvents as Allowances);
-      watchAllowances(contract);
     } catch (error) {
       if (error instanceof Error) {
         console.error("Error updating allowances:", error);
@@ -86,7 +73,7 @@ export const AllowancesProvider = ({
         functionName: "approve",
         args: [contract, BigInt(0)],
       },
-      { onSuccess: onRevokeSuccess }
+      { onSuccess: () => onRevokeSuccess(contract) }
     );
   };
 
