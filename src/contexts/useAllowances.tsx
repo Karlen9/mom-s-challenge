@@ -1,4 +1,10 @@
-import { createContext, useContext, useMemo, useState } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useMemo,
+  useState,
+} from "react";
 import { useAccount, useChainId, useWriteContract } from "wagmi";
 import { erc20Abi, parseAbiItem } from "viem";
 import { Allowances, TAddress } from "@/components/shared/types/types";
@@ -37,45 +43,54 @@ export const AllowancesProvider = ({
 
   const publicClient = useMemo(() => getPublicClient(chainId), [chainId]);
 
-  const onRevokeSuccess = (contract: TAddress) => {
-    updateAllowances(contract);
-    toast.success("Allowance succesfully revoked", {
-      position: "bottom-center",
-    });
-  };
-
   // Update allowances on button click
-  const updateAllowances = async (contract: TAddress) => {
-    try {
-      const logEvents = await publicClient.getLogs({
-        address: contract,
-        event: parsedEventString,
-        args: {
-          owner: address,
-        },
-        fromBlock: BigInt(1),
-      });
+  const updateAllowances = useCallback(
+    async (contract: TAddress) => {
+      try {
+        const logEvents = await publicClient.getLogs({
+          address: contract,
+          event: parsedEventString,
+          args: {
+            owner: address,
+          },
+          fromBlock: BigInt(1),
+        });
 
-      setAllowances(logEvents as Allowances);
-    } catch (error) {
-      if (error instanceof Error) {
-        console.error("Error updating allowances:", error);
-        toast.error(`Error updating allowances: ${error?.message}"`);
+        setAllowances(logEvents as Allowances);
+      } catch (error) {
+        if (error instanceof Error) {
+          console.error("Error updating allowances:", error);
+          toast.error(`Error updating allowances: ${error?.message}"`);
+        }
       }
-    }
-  };
+    },
+    [address, publicClient]
+  );
 
-  const revokeAllowance = (contract: TAddress, tokenAddress: TAddress) => {
-    writeContract(
-      {
-        address: tokenAddress,
-        abi: erc20Abi,
-        functionName: "approve",
-        args: [contract, BigInt(0)],
-      },
-      { onSuccess: () => onRevokeSuccess(contract) }
-    );
-  };
+  const onRevokeSuccess = useCallback(
+    (contract: TAddress) => {
+      updateAllowances(contract);
+      toast.success("Allowance succesfully revoked", {
+        position: "bottom-center",
+      });
+    },
+    [updateAllowances]
+  );
+
+  const revokeAllowance = useCallback(
+    (contract: TAddress, tokenAddress: TAddress) => {
+      writeContract(
+        {
+          address: tokenAddress,
+          abi: erc20Abi,
+          functionName: "approve",
+          args: [contract, BigInt(0)],
+        },
+        { onSuccess: () => onRevokeSuccess(contract) }
+      );
+    },
+    [onRevokeSuccess, writeContract]
+  );
 
   const contextValue = useMemo(
     (): TAllowancesLogProps => ({

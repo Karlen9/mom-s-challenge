@@ -9,7 +9,7 @@ export type FormField = {
   tokenaddress: TAddress | "";
 };
 
-export const TokenAddressForm = memo(() => {
+export const TokenAddressForm = memo(function TokenAddress() {
   const form = useForm<FormField>({
     defaultValues: { tokenaddress: "" },
     mode: "onChange",
@@ -25,7 +25,7 @@ export const TokenAddressForm = memo(() => {
 
   useEffect(() => {
     reset({ tokenaddress: "" });
-  }, [address, chainId]);
+  }, [address, chainId, reset]);
 
   const onSubmit = (data: FormField) => {
     updateAllowances(data.tokenaddress || "0x");
