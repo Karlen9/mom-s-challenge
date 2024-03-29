@@ -19,19 +19,18 @@ export const TokenAddressForm = memo(() => {
 
   const { chainId } = useAccount();
 
-  const { address } = useAccount(); 
+  const { address } = useAccount();
 
   const contractAddressFromInput = getValues("tokenaddress");
 
   const { updateAllowances } = useAllowances();
 
-  useEffect(() => { 
+  useEffect(() => {
     reset({ tokenaddress: "" });
   }, [address, chainId]);
 
-  const onSubmit = () => {
-    if (!contractAddressFromInput) return;
-    updateAllowances(contractAddressFromInput);
+  const onSubmit = (data: FormField) => {
+    updateAllowances(data.tokenaddress || "0x");
   };
 
   return (

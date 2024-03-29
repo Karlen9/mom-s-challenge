@@ -6,17 +6,21 @@ import { getPublicClient } from "@/config/getPublicClient";
 import React from "react";
 import { toast } from "react-toastify";
 
-type TAllowancesLogProps = { 
+type TAllowancesLogProps = {
   updateAllowances: (contract: TAddress) => void;
   revokeAllowance: (contractAddress: TAddress, tokenAddress: TAddress) => void;
   allowances: Allowances | null;
 };
 
-const AllowancesLogContext = createContext<TAllowancesLogProps>({
+const AllowancesContext = createContext<TAllowancesLogProps>({
   updateAllowances: async () => [],
   revokeAllowance: async () => {},
-  allowances: [],
+  allowances: null,
 });
+
+const parsedEventString = parseAbiItem(
+  "event Approval(address indexed owner, address indexed sender, uint256 value)"
+);
 
 export const AllowancesProvider = ({
   children,
@@ -24,6 +28,7 @@ export const AllowancesProvider = ({
   children: React.ReactElement;
 }): React.ReactElement => {
   const [allowances, setAllowances] = useState<Allowances | null>(null);
+
   const { address } = useAccount();
 
   const { writeContract } = useWriteContract();
@@ -32,31 +37,45 @@ export const AllowancesProvider = ({
 
   const publicClient = useMemo(() => getPublicClient(chainId), [chainId]);
 
-  const onRevokeSuccess = (contract: TAddress) => {
-    updateAllowances(contract);
+  const onRevokeSuccess = () => {
     toast.success("Allowance succesfully revoked", {
       position: "bottom-center",
     });
   };
 
-  const updateAllowances = (contract: TAddress) => {
-    new Promise((res) =>
-      res(
-        publicClient.getLogs({
-          address: contract,
-          event: parseAbiItem(
-            "event Approval(address indexed owner, address indexed sender, uint256 value)"
-          ),
-          args: {
-            owner: address,
-          },
-          fromBlock: BigInt(1),
-        })
-      )
-    ).then((res) => {
-      setAllowances(res as Allowances);
-      console.log(res);
+  const watchAllowances = (contract: TAddress) => {
+    publicClient.watchEvent({
+      address: contract,
+      event: parsedEventString,
+      args: {
+        owner: address,
+      },
+      onLogs: (logs) => {
+        setAllowances(logs as Allowances);
+      },
     });
+  };
+
+  // Update allowances on button click
+  const updateAllowances = async (contract: TAddress) => {
+    try {
+      const logEvents = await publicClient.getLogs({
+        address: contract,
+        event: parsedEventString,
+        args: {
+          owner: address,
+        },
+        fromBlock: BigInt(1),
+      });
+
+      setAllowances(logEvents as Allowances);
+      watchAllowances(contract);
+    } catch (error) {
+      if (error instanceof Error) {
+        console.error("Error updating allowances:", error);
+        toast.error(`Error updating allowances: ${error?.message}"`);
+      }
+    }
   };
 
   const revokeAllowance = (contract: TAddress, tokenAddress: TAddress) => {
@@ -67,7 +86,7 @@ export const AllowancesProvider = ({
         functionName: "approve",
         args: [contract, BigInt(0)],
       },
-      { onSuccess: () => onRevokeSuccess(contract) }
+      { onSuccess: onRevokeSuccess }
     );
   };
 
@@ -81,17 +100,18 @@ export const AllowancesProvider = ({
   );
 
   return (
-    <AllowancesLogContext.Provider value={contextValue}>
+    <AllowancesContext.Provider value={contextValue}>
       {children}
-    </AllowancesLogContext.Provider>
+    </AllowancesContext.Provider>
   );
 };
 
+// Hook to consume context
 export const useAllowances = () => {
   const {
     allowances,
     updateAllowances,
     revokeAllowance: revoke,
-  } = useContext(AllowancesLogContext);
+  } = useContext(AllowancesContext);
   return { allowances, updateAllowances, revoke };
 };
