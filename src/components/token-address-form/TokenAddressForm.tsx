@@ -21,9 +21,7 @@ export const TokenAddressForm = memo(function TokenAddress() {
   const { handleSubmit, formState, reset, watch } = form;
   const { errors } = formState;
 
-  const { chainId } = useAccount();
-
-  const { address } = useAccount();
+  const { chainId, address } = useAccount();
 
   const watchTokenAddress = watch("tokenaddress");
 

@@ -5,26 +5,34 @@ import {
   useMemo,
   useState,
 } from "react";
-import { useAccount, useChainId, useWriteContract } from "wagmi";
+import {
+  useAccount,
+  useChainId,
+  useReadContracts,
+  useWriteContract,
+} from "wagmi";
 import { erc20Abi, parseAbiItem } from "viem";
 import { Allowances, TAddress } from "@/components/shared/types/types";
 import { getPublicClient } from "@/config/getPublicClient";
 import React from "react";
 import { toast } from "react-toastify";
+import { filterMaxValueByAddress } from "../components/shared/utils/filterMaxValueByAddress";
 
 type TAllowancesLogProps = {
   updateAllowances: (contract: TAddress) => void;
   revokeAllowance: (contractAddress: TAddress, tokenAddress: TAddress) => void;
-  allowances: Allowances | null;
+  allowances: Allowances | null | undefined;
+  isLoading: boolean;
 };
 
 const AllowancesContext = createContext<TAllowancesLogProps>({
   updateAllowances: async () => [],
   revokeAllowance: () => {},
+  isLoading: false,
   allowances: null,
 });
 
-const parsedEventString = parseAbiItem(
+const parsedApprovalEvent = parseAbiItem(
   "event Approval(address indexed owner, address indexed sender, uint256 value)"
 );
 
@@ -33,7 +41,7 @@ export const AllowancesProvider = ({
 }: {
   children: React.ReactElement;
 }): React.ReactElement => {
-  const [allowances, setAllowances] = useState<Allowances | null>(null);
+  const [rawAllowances, setRawAllowances] = useState<Allowances | null>(null);
 
   const { address } = useAccount();
 
@@ -43,20 +51,40 @@ export const AllowancesProvider = ({
 
   const publicClient = useMemo(() => getPublicClient(chainId), [chainId]);
 
+  //getting all allowances for the events we have from logs
+  const {
+    data: result,
+    refetch,
+    isLoading,
+  } = useReadContracts({
+    contracts: rawAllowances?.map((item) => {
+      return {
+        address: item.address,
+        abi: erc20Abi,
+        functionName: "allowance",
+        args: [item.args.owner, item.args.sender],
+      };
+    }),
+  });
+
   // Update allowances on button click
   const updateAllowances = useCallback(
     async (contract: TAddress) => {
       try {
-        const logEvents = await publicClient.getLogs({
+        const approvalEvents = await publicClient.getLogs({
           address: contract,
-          event: parsedEventString,
+          event: parsedApprovalEvent,
           args: {
             owner: address,
           },
           fromBlock: BigInt(1),
         });
 
-        setAllowances(logEvents as Allowances);
+        refetch();
+        const filteredEvents = filterMaxValueByAddress(
+          approvalEvents as Allowances
+        );
+        setRawAllowances(filteredEvents);
       } catch (error) {
         if (error instanceof Error) {
           console.error("Error updating allowances:", error);
@@ -65,6 +93,21 @@ export const AllowancesProvider = ({
     },
     [address, publicClient]
   );
+
+  //update logs according to allowances' values
+  const allowances: Allowances | undefined | null = useMemo(() => {
+    if (!rawAllowances) return [];
+    if (!result) return rawAllowances;
+    return rawAllowances.map((item, index) => {
+      return {
+        ...item,
+        args: {
+          ...item.args,
+          value: result[index].result as bigint,
+        },
+      };
+    });
+  }, [rawAllowances, result, updateAllowances]);
 
   const onRevokeSuccess = useCallback(
     (tokenAddress: TAddress) => {
@@ -95,9 +138,10 @@ export const AllowancesProvider = ({
     (): TAllowancesLogProps => ({
       updateAllowances,
       allowances,
+      isLoading,
       revokeAllowance,
     }),
-    [updateAllowances, allowances, revokeAllowance]
+    [updateAllowances, allowances, revokeAllowance, isLoading]
   );
 
   return (
@@ -112,7 +156,8 @@ export const useAllowances = () => {
   const {
     allowances,
     updateAllowances,
+    isLoading,
     revokeAllowance: revoke,
   } = useContext(AllowancesContext);
-  return { allowances, updateAllowances, revoke };
+  return { allowances, updateAllowances, revoke, isLoading };
 };

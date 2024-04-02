@@ -1,7 +1,7 @@
 import { Allowance, Allowances } from "../types/types";
 
 export const filterMaxValueByAddress = (arr: Allowances) => {
-  const addressMap = arr.reduce(
+  const senderMap = arr.reduce(
     (map: Record<string, Allowance>, obj: Allowance) => {
       // Check if the current object's address is already in the map
       if (obj.args.sender in map) {
@@ -19,6 +19,9 @@ export const filterMaxValueByAddress = (arr: Allowances) => {
   );
 
   // Convert the map back to an array of objects
-  const resultArray = Object.values(addressMap);
+  const resultArray = Object.values(senderMap).filter(
+    (item) => item.args.value !== BigInt(0)
+  );
+
   return resultArray;
 };
