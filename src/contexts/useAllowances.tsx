@@ -67,8 +67,8 @@ export const AllowancesProvider = ({
   );
 
   const onRevokeSuccess = useCallback(
-    (contract: TAddress) => {
-      updateAllowances(contract);
+    (tokenAddress: TAddress) => {
+      updateAllowances(tokenAddress);
       toast.success("Allowance succesfully revoked", {
         position: "bottom-center",
       });
@@ -85,7 +85,7 @@ export const AllowancesProvider = ({
           functionName: "approve",
           args: [contract, BigInt(0)],
         },
-        { onSuccess: () => onRevokeSuccess(contract) }
+        { onSuccess: () => onRevokeSuccess(tokenAddress) }
       );
     },
     [onRevokeSuccess, writeContract]
