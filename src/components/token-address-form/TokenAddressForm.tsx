@@ -25,7 +25,7 @@ export const TokenAddressForm = memo(function TokenAddress() {
 
   const watchTokenAddress = watch("tokenaddress");
 
-  const { updateAllowances } = useAllowances();
+  const { refreshAllowances } = useAllowances();
 
   useEffect(() => {
     reset({ tokenaddress: "" });
@@ -36,7 +36,7 @@ export const TokenAddressForm = memo(function TokenAddress() {
     return setIsWalletConnected(false);
   }, [address, chainId]);
 
-  const onSubmit = (data: FormField) => {
+  const onSubmit = () => {
     if (!address)
       return toast.error("Please, connect the wallet", {
         position: "top-center",
@@ -47,7 +47,7 @@ export const TokenAddressForm = memo(function TokenAddress() {
         position: "top-center",
         hideProgressBar: true,
       });
-    updateAllowances(data.tokenaddress || "0x");
+    refreshAllowances(watchTokenAddress);
   };
 
   return (

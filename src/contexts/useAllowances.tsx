@@ -1,32 +1,28 @@
-import {
+import React, {
   createContext,
   useCallback,
   useContext,
+  useEffect,
   useMemo,
   useState,
 } from "react";
-import {
-  useAccount,
-  useChainId,
-  useReadContracts,
-  useWriteContract,
-} from "wagmi";
+import { useAccount, useReadContracts, useWriteContract } from "wagmi";
 import { erc20Abi, parseAbiItem } from "viem";
-import { Allowances, TAddress } from "@/components/shared/types/types";
+import { TAddress, TAllowances } from "@/components/shared/types/types";
 import { getPublicClient } from "@/config/getPublicClient";
-import React from "react";
 import { toast } from "react-toastify";
-import { filterMaxValueByAddress } from "../components/shared/utils/filterMaxValueByAddress";
+import { getLatestNotEmptyEvents } from "../components/shared/utils/getLatestNotEmptyEvents";
+import { filterNotEmptyEvents } from "@/components/shared/utils/filterNotEmptyEvents";
 
 type TAllowancesLogProps = {
-  updateAllowances: (contract: TAddress) => void;
+  refreshAllowances: (contract: TAddress) => void;
   revokeAllowance: (contractAddress: TAddress, tokenAddress: TAddress) => void;
-  allowances: Allowances | null | undefined;
+  allowances: TAllowances | null | undefined;
   isLoading: boolean;
 };
 
 const AllowancesContext = createContext<TAllowancesLogProps>({
-  updateAllowances: async () => [],
+  refreshAllowances: async () => [],
   revokeAllowance: () => {},
   isLoading: false,
   allowances: null,
@@ -41,23 +37,27 @@ export const AllowancesProvider = ({
 }: {
   children: React.ReactElement;
 }): React.ReactElement => {
-  const [rawAllowances, setRawAllowances] = useState<Allowances | null>(null);
+  const [approvalEvents, setApprovalEvents] = useState<TAllowances | null>(
+    null
+  );
 
-  const { address } = useAccount();
+  const { address, chainId } = useAccount();
 
   const { writeContract } = useWriteContract();
 
-  const chainId = useChainId();
-
   const publicClient = useMemo(() => getPublicClient(chainId), [chainId]);
 
-  //getting all allowances for the events we have from logs
+  useEffect(() => {
+    setApprovalEvents(null);
+  }, [address, chainId]);
+
+  // Getting all allowances for the events we get from logs
   const {
-    data: result,
+    data: allowancesData,
     refetch,
     isLoading,
   } = useReadContracts({
-    contracts: rawAllowances?.map((item) => {
+    contracts: approvalEvents?.map((item) => {
       return {
         address: item.address,
         abi: erc20Abi,
@@ -67,8 +67,8 @@ export const AllowancesProvider = ({
     }),
   });
 
-  // Update allowances on button click
-  const updateAllowances = useCallback(
+  // Getting new approval event logs from blockchain
+  const refreshAllowances = useCallback(
     async (contract: TAddress) => {
       try {
         const approvalEvents = await publicClient.getLogs({
@@ -81,42 +81,46 @@ export const AllowancesProvider = ({
         });
 
         refetch();
-        const filteredEvents = filterMaxValueByAddress(
-          approvalEvents as Allowances
+
+        const filteredEvents = getLatestNotEmptyEvents(
+          approvalEvents as TAllowances
         );
-        setRawAllowances(filteredEvents);
+
+        setApprovalEvents(filteredEvents);
       } catch (error) {
         if (error instanceof Error) {
-          console.error("Error updating allowances:", error);
+          console.error("Error refreshing allowances:", error);
         }
       }
     },
     [address, publicClient]
   );
 
-  //update logs according to allowances' values
-  const allowances: Allowances | undefined | null = useMemo(() => {
-    if (!rawAllowances) return [];
-    if (!result) return rawAllowances;
-    return rawAllowances.map((item, index) => {
-      return {
-        ...item,
-        args: {
-          ...item.args,
-          value: result[index].result as bigint,
-        },
-      };
-    });
-  }, [rawAllowances, result, updateAllowances]);
+  // Update logs according to allowances' values
+  const allowances: TAllowances | undefined | null = useMemo(() => {
+    if (!approvalEvents) return null;
+    if (!allowancesData) return approvalEvents;
+    return filterNotEmptyEvents(
+      approvalEvents.map((item, index) => {
+        return {
+          ...item,
+          args: {
+            ...item.args,
+            value: allowancesData[index].result as bigint,
+          },
+        };
+      })
+    );
+  }, [approvalEvents, allowancesData, refreshAllowances, address, chainId]);
 
   const onRevokeSuccess = useCallback(
     (tokenAddress: TAddress) => {
-      updateAllowances(tokenAddress);
+      refreshAllowances(tokenAddress);
       toast.success("Allowance succesfully revoked", {
         position: "bottom-center",
       });
     },
-    [updateAllowances]
+    [refreshAllowances]
   );
 
   const revokeAllowance = useCallback(
@@ -136,12 +140,12 @@ export const AllowancesProvider = ({
 
   const contextValue = useMemo(
     (): TAllowancesLogProps => ({
-      updateAllowances,
+      refreshAllowances,
       allowances,
       isLoading,
       revokeAllowance,
     }),
-    [updateAllowances, allowances, revokeAllowance, isLoading]
+    [refreshAllowances, allowances, revokeAllowance, isLoading]
   );
 
   return (
@@ -151,13 +155,12 @@ export const AllowancesProvider = ({
   );
 };
 
-// Hook to consume context
 export const useAllowances = () => {
   const {
     allowances,
-    updateAllowances,
+    refreshAllowances,
     isLoading,
     revokeAllowance: revoke,
   } = useContext(AllowancesContext);
-  return { allowances, updateAllowances, revoke, isLoading };
+  return { allowances, refreshAllowances, revoke, isLoading };
 };

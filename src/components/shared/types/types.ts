@@ -1,6 +1,6 @@
-export type Allowances = Allowance[];
+export type TAllowances = TAllowance[];
 
-export type Allowance = {
+export type TAllowance = {
   address: TAddress;
   args: {
     owner: TAddress;
@@ -10,7 +10,7 @@ export type Allowance = {
   blockHash: TAddress;
   blockNumber: bigint;
   data: TAddress;
-  eventName: "Approval"; 
+  eventName: "Approval";
   logIndex: number;
   removed: boolean;
   topics: TAddress[];
